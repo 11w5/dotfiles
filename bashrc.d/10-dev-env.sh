@@ -98,3 +98,20 @@ alias uvr='uv run'
 alias uva='uv add'
 alias uvd='uv add --dev'
 alias uvt='uv run pytest -q'
+
+# Minimal project bootstrap helpers
+mkpy() { # mkpy <name>
+  [ -n "$1" ] || { echo "Usage: mkpy <name>"; return 1; }
+  local dir="$HOME/Dev/Projects/$1"; mkdir -p "$dir" && cd "$dir" || return 1
+  uv init . && uv venv && uv sync
+}
+mkjs() { # mkjs <name>
+  [ -n "$1" ] || { echo "Usage: mkjs <name>"; return 1; }
+  local dir="$HOME/Dev/Projects/$1"; mkdir -p "$dir" && cd "$dir" || return 1
+  if command -v corepack >/dev/null 2>&1; then corepack enable >/dev/null 2>&1 || true; fi
+  if command -v pnpm >/dev/null 2>&1 || corepack prepare pnpm@latest --activate >/dev/null 2>&1; then
+    pnpm init -y
+  else
+    npm init -y
+  fi
+}
