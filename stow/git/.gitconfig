@@ -11,6 +11,7 @@
 [core]
     editor = nvim
     pager = less -R
+    excludesfile = ~/.gitignore_global
 
 [pull]
     rebase = false
@@ -20,4 +21,3 @@
 
 [push]
     default = current
-

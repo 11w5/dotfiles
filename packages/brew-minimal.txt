@@ -1,0 +1,16 @@
+# Homebrew minimal profile (macOS/Linuxbrew)
+git
+curl
+unzip
+stow
+tmux
+fzf
+zoxide
+ripgrep
+fd
+bat
+jq
+tree
+tldr
+neovim
+

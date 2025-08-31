@@ -1,0 +1,43 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-and-install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lint shell scripts (shellcheck)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck stow curl unzip
+          set -e
+          shopt -s globstar nullglob
+          FILES=(
+            scripts/*.sh
+            dotfiles/scripts/*.sh
+            dotfiles/scripts/**/*.sh
+            dotfiles/stow/scripts/scripts/*.sh
+            dotfiles/install.sh
+          )
+          if [ ${#FILES[@]} -gt 0 ]; then
+            shellcheck -S warning "${FILES[@]}" || true
+          fi
+
+      - name: Install (no packages)
+        env:
+          DOTFILES_DIR: ${{ github.workspace }}/dotfiles
+          NO_PKGS: "1"
+          NO_CSV: "1"
+        run: |
+          bash dotfiles/install.sh --dir "$DOTFILES_DIR" --no-packages --no-csv
+
+      - name: Verify stowed files
+        run: |
+          test -L "$HOME/.tmux.conf" || (echo "tmux conf not linked" && exit 1)
+          test -d "$HOME/.bashrc.d" || (echo "bashrc.d missing" && exit 1)
+

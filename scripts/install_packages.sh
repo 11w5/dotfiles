@@ -8,13 +8,24 @@ set -euo pipefail
 # - cargo.txt via cargo install
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PROFILE="${DOTFILES_PROFILE:-full}"
+
+# Choose package lists by profile
 APT_LIST="$ROOT/packages/apt.txt"
 BREW_LIST="$ROOT/packages/brew.txt"
+case "$PROFILE" in
+  minimal|server)
+    [ -f "$ROOT/packages/apt-minimal.txt" ] && APT_LIST="$ROOT/packages/apt-minimal.txt"
+    [ -f "$ROOT/packages/brew-minimal.txt" ] && BREW_LIST="$ROOT/packages/brew-minimal.txt"
+    ;;
+  full|*) : ;;
+esac
 PIPX_LIST="$ROOT/packages/pipx.txt"
 NPM_LIST="$ROOT/packages/npm.txt"
 CARGO_LIST="$ROOT/packages/cargo.txt"
 
 echo "[install_packages] Using ROOT=$ROOT"
+echo "[install_packages] Profile=$PROFILE"
 
 # sudo helper
 SUDO=""

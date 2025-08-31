@@ -1,0 +1,19 @@
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editors
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Logs and caches
+*.log
+__pycache__/
+.pytest_cache/
+node_modules/
+dist/
+build/
+target/
+

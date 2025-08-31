@@ -1,0 +1,23 @@
+# Apt minimal profile (Ubuntu/Debian)
+# Essentials
+git
+curl
+unzip
+ca-certificates
+stow
+build-essential
+
+# CLI core
+tmux
+fzf
+zoxide
+ripgrep
+fd-find
+bat
+jq
+tree
+tldr
+
+# Editor
+neovim
+
