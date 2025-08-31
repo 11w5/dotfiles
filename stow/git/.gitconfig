@@ -1,0 +1,23 @@
+[user]
+    name = YOUR NAME
+    email = your.email@example.com
+
+[init]
+    defaultBranch = main
+
+[color]
+    ui = auto
+
+[core]
+    editor = nvim
+    pager = less -R
+
+[pull]
+    rebase = false
+
+[merge]
+    conflictstyle = zdiff3
+
+[push]
+    default = current
+

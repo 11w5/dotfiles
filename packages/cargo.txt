@@ -1,0 +1,6 @@
+# Rust cargo install list (optional). Requires Rust toolchain installed.
+# Examples:
+# eza
+# hyperfine
+# du-dust
+

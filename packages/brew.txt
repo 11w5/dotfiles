@@ -1,0 +1,21 @@
+# Homebrew formulae to install (macOS/Linuxbrew)
+git
+curl
+unzip
+stow
+tmux
+fzf
+zoxide
+ripgrep
+fd
+bat
+nnn
+ranger
+jq
+tree
+tldr
+eza
+neovim
+sqlite
+visidata
+

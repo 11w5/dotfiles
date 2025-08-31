@@ -1,0 +1,6 @@
+# Python CLIs to install via pipx (user-local)
+# Examples:
+# httpie
+# poetry
+# visidata
+

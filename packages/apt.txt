@@ -1,0 +1,38 @@
+# Apt packages to install (Ubuntu/Debian)
+# Lines starting with # are comments. One package per line.
+
+# Essentials
+git
+curl
+unzip
+ca-certificates
+build-essential
+stow
+
+# Terminal + navigation
+tmux
+fzf
+zoxide
+ripgrep
+fd-find
+bat
+nnn
+ranger
+mc
+eza
+jq
+tree
+tldr
+
+# Editors
+neovim
+
+# Python basics
+python3-venv
+python3-pip
+pipx
+
+# Data tools
+visidata
+sqlite3
+

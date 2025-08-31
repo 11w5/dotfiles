@@ -1,0 +1,5 @@
+# Global npm packages (optional). One per line.
+# Examples:
+# npm-check-updates
+# serve
+
