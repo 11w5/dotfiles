@@ -23,19 +23,22 @@ The installer will:
 
 1) Clone the repo:
    # HTTPS
+   ```bash
    git clone https://github.com/11w5/dotfiles.git ~/dotfiles
    cd ~/dotfiles
+   ```
    # Or SSH (after adding an SSH key to GitHub)
-   # git clone git@github.com:11w5/dotfiles.git ~/dotfiles && cd ~/dotfiles
-
-2) Option A — Stow-based bootstrap (recommended):
+  ```bash
+   git clone git@github.com:11w5/dotfiles.git ~/dotfiles && cd ~/dotfiles
+  ```
+3) Option A — Stow-based bootstrap (recommended):
    # Creates symlinks to your home with GNU Stow
    ./scripts/bootstrap_stow.sh
 
    Option B — Legacy bootstrap (simple symlinks):
    ./bootstrap.sh
 
-3) Start working:
+4) Start working:
    source ~/.bashrc
    ~/Dev/start-dev.sh [project]
 
