@@ -58,7 +58,7 @@ if ! command -v xsv >/dev/null 2>&1; then
   }
   XSV_HTML=$(curl -fsSL https://github.com/BurntSushi/xsv/releases/latest || true)
   if [ -n "$XSV_HTML" ]; then
-    XSV_PATH=$(printf "%s" "$XSV_HTML" | grep -oE '/BurntSushi/xsv/releases/download/[^"']+/xsv-[^"']+-(x86_64|amd64)-unknown-linux-(gnu|musl)\.tar\.gz' | head -n1 || true)
+    XSV_PATH=$(printf "%s" "$XSV_HTML" | grep -oE "/BurntSushi/xsv/releases/download/[^"]+/xsv-[^"]+-(x86_64|amd64)-unknown-linux-(gnu|musl)\.tar\.gz" | head -n1 || true)
     [ -n "$XSV_PATH" ] && install_xsv "https://github.com$XSV_PATH" || true
   fi
   if ! command -v xsv >/dev/null 2>&1; then
@@ -105,4 +105,3 @@ echo "Versions:"
 command -v duckdb >/dev/null 2>&1 && duckdb -c "select 'duckdb ok' as ok" || echo "duckdb: MISSING"
 command -v xsv    >/dev/null 2>&1 && xsv --version || echo "xsv: not installed (fallback active)"
 command -v vd     >/dev/null 2>&1 && vd --version  || echo "visidata: try 'vd --version'"
-

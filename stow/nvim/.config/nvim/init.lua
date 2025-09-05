@@ -134,4 +134,3 @@ pcall(function()
     paste = { ['+'] = paste, ['*'] = paste },
   }
 end)
-

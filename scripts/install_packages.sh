@@ -38,7 +38,16 @@ install_apt() {
   echo "[apt] Updating package index…"
   $SUDO apt-get update -y
   # Build a list ignoring comments/empty lines
-  mapfile -t pkgs < <(sed -e 's/#.*$//' -e '/^\s*$/d' "$APT_LIST")
+  mapfile -t pkgs_raw < <(sed -e 's/#.*$//' -e '/^\s*$/d' "$APT_LIST")
+  # Filter out packages not available in current apt repos (avoid whole install failing)
+  pkgs=()
+  for p in "${pkgs_raw[@]}"; do
+    if apt-cache show "$p" >/dev/null 2>&1; then
+      pkgs+=("$p")
+    else
+      echo "[apt] Skipping unavailable package: $p"
+    fi
+  done
   if [ ${#pkgs[@]} -gt 0 ]; then
     echo "[apt] Installing: ${pkgs[*]}"
     DEBIAN_FRONTEND=noninteractive $SUDO apt-get install -y "${pkgs[@]}"
