@@ -3,6 +3,7 @@ git
 curl
 unzip
 stow
+zsh
 tmux
 fzf
 zoxide
@@ -18,4 +19,4 @@ eza
 neovim
 sqlite
 visidata
-
+starship

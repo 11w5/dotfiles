@@ -3,6 +3,7 @@ git
 curl
 unzip
 stow
+zsh
 tmux
 fzf
 zoxide
@@ -13,4 +14,4 @@ jq
 tree
 tldr
 neovim
-
+starship

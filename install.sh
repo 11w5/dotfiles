@@ -108,6 +108,7 @@ run_installers() {
 post_notes() {
   log "Done. Open a new shell or run: source ~/.bashrc"
   printf "\nSuggested next steps:\n"
+  printf "  - zsh                     # try the zsh + starship shell\n"
   printf "  - vd data.csv              # interactive CSV browser\n"
   printf "  - csvview data.csv         # pretty CSV table\n"
   printf "  - duckdb -c \"select * from read_csv_auto('data.csv') limit 20\"\n"

@@ -1,0 +1,42 @@
+add_newline = false
+
+format = """
+$directory\
+$git_branch\
+$git_status\
+$python\
+$nodejs\
+$cmd_duration\
+$line_break\
+$character"""
+
+[character]
+success_symbol = "[>](bold green)"
+error_symbol = "[>](bold red)"
+
+[directory]
+style = "bold blue"
+truncation_length = 3
+truncate_to_repo = true
+
+[git_branch]
+format = " [$symbol$branch]($style)"
+style = "bold purple"
+symbol = "git:"
+
+[git_status]
+format = "([$all_status$ahead_behind]($style))"
+style = "yellow"
+
+[python]
+format = " [py ${pyenv_prefix}(${version} )(\\($virtualenv\\) )]($style)"
+style = "green"
+
+[nodejs]
+format = " [node $version]($style)"
+style = "green"
+
+[cmd_duration]
+format = " [$duration]($style)"
+min_time = 1000
+style = "dimmed yellow"

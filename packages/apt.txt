@@ -10,6 +10,7 @@ build-essential
 stow
 
 # Terminal + navigation
+zsh
 tmux
 fzf
 zoxide
@@ -23,6 +24,7 @@ eza
 jq
 tree
 tldr
+starship
 
 # Editors
 neovim
@@ -35,4 +37,3 @@ pipx
 # Data tools
 visidata
 sqlite3
-

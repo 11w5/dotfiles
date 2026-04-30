@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-mkdir -p "$HOME/.bashrc.d" "$HOME/.config/nvim" "$HOME/.config/ranger" "$HOME/scripts" "$HOME/Dev"
+BASHRC_DIR="$ROOT/stow/bash/.bashrc.d"
+[ -d "$BASHRC_DIR" ] || BASHRC_DIR="$ROOT/bashrc.d"
+mkdir -p "$HOME/.bashrc.d" "$HOME/.config/nvim" "$HOME/.config/ranger" "$HOME/.config" "$HOME/scripts" "$HOME/Dev" "$HOME/dev"
 
 # Symlink configs
-ln -sf "$ROOT/bashrc.d/10-dev-env.sh" "$HOME/.bashrc.d/10-dev-env.sh"
-[ -f "$ROOT/bashrc.d/20-brew-extras.sh" ] && ln -sf "$ROOT/bashrc.d/20-brew-extras.sh" "$HOME/.bashrc.d/20-brew-extras.sh"
+ln -sf "$BASHRC_DIR/10-dev-env.sh" "$HOME/.bashrc.d/10-dev-env.sh"
+[ -f "$BASHRC_DIR/20-brew-extras.sh" ] && ln -sf "$BASHRC_DIR/20-brew-extras.sh" "$HOME/.bashrc.d/20-brew-extras.sh"
+[ -f "$ROOT/stow/zsh/.zshrc" ] && ln -sf "$ROOT/stow/zsh/.zshrc" "$HOME/.zshrc"
+[ -f "$ROOT/stow/starship/.config/starship.toml" ] && ln -sf "$ROOT/stow/starship/.config/starship.toml" "$HOME/.config/starship.toml"
 ln -sf "$ROOT/tmux.conf" "$HOME/.tmux.conf"
 ln -sf "$ROOT/nvim/init.lua" "$HOME/.config/nvim/init.lua"
 [ -f "$ROOT/ranger/rc.conf" ] && ln -sf "$ROOT/ranger/rc.conf" "$HOME/.config/ranger/rc.conf"

@@ -32,7 +32,7 @@ if [ ! -d "$STOW_DIR" ]; then
 fi
 
 # Ensure target directories exist
-mkdir -p "$HOME/.bashrc.d" "$HOME/.config" "$HOME/scripts" "$HOME/Dev/Projects"
+mkdir -p "$HOME/.bashrc.d" "$HOME/.config" "$HOME/scripts" "$HOME/dev"
 
 # Install stow if missing (best-effort)
 if ! command -v stow >/dev/null 2>&1; then
@@ -44,7 +44,7 @@ fi
 command -v stow >/dev/null 2>&1 || { echo "GNU Stow not available. Install it and re-run."; exit 1; }
 
 # Compute base packages
-PKGS=(bash zsh tmux nvim ranger scripts dev git editor)
+PKGS=(bash zsh starship tmux nvim ranger scripts dev git editor)
 
 # OS-specific packages (optional)
 UNAME_S=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -76,3 +76,8 @@ if ! grep -q "bashrc.d" "$HOME/.bashrc" 2>/dev/null; then
 fi
 
 echo "Stow bootstrap complete. Open a new shell or run: source ~/.bashrc"
+if command -v zsh >/dev/null 2>&1; then
+  echo "Optional: make zsh your login shell with: chsh -s $(command -v zsh)"
+else
+  echo "Optional: install zsh, then run bootstrap again for the full zsh prompt setup."
+fi

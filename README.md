@@ -6,6 +6,8 @@ Minimal, navigation-first setup for Python (uv) and JS, tmux + Neovim.
 - bashrc.d/: shell aliases, navigation helpers, uv helpers (mkpy/mkjs)
 - tmux.conf: tmux with Ctrl-a prefix and TPM plugins; Prefix+e toggles Neovim tree
 - nvim/: minimal Neovim config with file tree, Telescope, LSP, Treesitter
+- zsh/: portable Zsh startup with Starship prompt fallback
+- starship/: compact prompt theme for repo, Python, Node, and command duration
 - ranger/: basic config (optional)
 - scripts/: tmux IDE helpers, specs updater, corepack setup
 - Dev/start-dev.sh: default tmux session launcher
@@ -19,6 +21,7 @@ The installer will:
 - Install minimal deps (git, stow, curl, unzip) via apt/brew when available.
 - Clone/update to ~/dotfiles.
 - Stow configs and install curated packages + CSV tools.
+- Install/link Bash, Zsh, Starship, tmux, Neovim, git, and helper scripts.
 - Respect profiles (DOTFILES_PROFILE=minimal|server|full) for package selection.
 
 1) Clone the repo:
@@ -42,9 +45,15 @@ The installer will:
    source ~/.bashrc
    ~/Dev/start-dev.sh [project]
 
+   Optional Zsh login shell:
+   ```bash
+   chsh -s "$(command -v zsh)"
+   ```
+
 Project helpers (optional):
 - mkpy myproj  # Create a Python project with uv init + venv
 - mkjs myapp   # Create a JS project with pnpm (via corepack) or npm
+- pp           # Pick a project under ${DOTFILES_PROJECTS_DIR:-~/dev}
 
 tmux tips:
 - Prefix is Ctrl-a; Prefix + e toggles file tree in current Neovim pane.
@@ -105,6 +114,8 @@ git clone https://github.com/11w5/dotfiles.git ~/dotfiles && cd ~/dotfiles
 ./scripts/install_csv_tools.sh
 ```
 
+If `apt` does not provide `starship` or `eza` on an older Ubuntu release, install Homebrew/Linuxbrew and rerun `./scripts/install_packages.sh`, or install those tools manually. The shell config has plain fallbacks when they are missing.
+
 No sudo / no stow available
 - Use the legacy bootstrap: `./bootstrap.sh` (creates direct symlinks without stow)
 - You can still run: `./scripts/install_csv_tools.sh` (writes to ~/.local/bin if needed)
@@ -133,6 +144,8 @@ Shortcuts for common flows:
 
 Packages live under stow/ and mirror their destinations under $HOME:
 - stow/bash/.bashrc.d/*            -> ~/.bashrc.d/*
+- stow/zsh/.zshrc                  -> ~/.zshrc
+- stow/starship/.config/starship.toml -> ~/.config/starship.toml
 - stow/tmux/.tmux.conf             -> ~/.tmux.conf
 - stow/nvim/.config/nvim/init.lua  -> ~/.config/nvim/init.lua
 - stow/ranger/.config/ranger/*     -> ~/.config/ranger/*
@@ -151,7 +164,7 @@ Add or remove packages by editing the stow/* trees, then rerun:
 Update on an existing machine
 ```
 cd ~/dotfiles && git pull
-stow -d stow -t "$HOME" -R bash zsh tmux nvim ranger scripts dev git editor
+stow -d stow -t "$HOME" -R bash zsh starship tmux nvim ranger scripts dev git editor
 ```
 
 Unstow (remove symlinks)
@@ -180,7 +193,8 @@ Cross-platform specifics:
 
 ## Commands Cheat Sheet
 
-- proj: jump to `~/Dev/Projects`
+- dev: jump to `~/dev`
+- proj: jump to `${DOTFILES_PROJECTS_DIR:-~/dev}`
 - pp: project picker (fzf + fd/fdfind)
 - mkpy <name>: Python project with uv (init + venv + sync)
 - mkjs <name>: JS project (pnpm via corepack if available; else npm)
@@ -225,6 +239,10 @@ On a new machine:
 git clone https://github.com/11w5/dotfiles.git ~/dotfiles && cd ~/dotfiles
 ./scripts/bootstrap_stow.sh && ./scripts/install_packages.sh && ./scripts/install_csv_tools.sh
 ```
+
+Chezmoi note:
+- This repo currently uses GNU Stow because it is transparent, easy to inspect, and already structured for new-machine bootstrap.
+- Use chezmoi later only if you need encrypted templated secrets, machine-specific templates, or more complex per-host conditionals.
 
 ## CI
 

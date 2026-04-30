@@ -1,6 +1,6 @@
 .PHONY: help bootstrap restow packages csv full ssh publish update uninstall
 
-PKGS := bash zsh tmux nvim ranger scripts dev git editor
+PKGS := bash zsh starship tmux nvim ranger scripts dev git editor
 STOW := stow -d stow -t $(HOME)
 
 help:

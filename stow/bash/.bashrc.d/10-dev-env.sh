@@ -2,23 +2,71 @@
 export EDITOR=${EDITOR:-nvim}
 export VISUAL=$EDITOR
 
+# User bin paths
+case ":$PATH:" in
+  *":$HOME/.local/bin:"*) : ;;
+  *) export PATH="$HOME/.local/bin:$PATH" ;;
+esac
+case ":$PATH:" in
+  *":$HOME/.cargo/bin:"*) : ;;
+  *) export PATH="$HOME/.cargo/bin:$PATH" ;;
+esac
+case ":$PATH:" in
+  *":$HOME/.linuxbrew/bin:"*) : ;;
+  *) export PATH="$HOME/.linuxbrew/bin:$PATH" ;;
+esac
+case ":$PATH:" in
+  *":$HOME/scripts:"*) : ;;
+  *) export PATH="$HOME/scripts:$PATH" ;;
+esac
+
+_dot_shell_name="${ZSH_VERSION:+zsh}"
+_dot_shell_name="${_dot_shell_name:-${BASH_VERSION:+bash}}"
+_dot_interactive=0
+case "$-" in
+  *i*) [ -t 0 ] && _dot_interactive=1 ;;
+esac
+
 # fzf keybindings and completion if available
-if [ -f /usr/share/doc/fzf/examples/key-bindings.bash ]; then
-  source /usr/share/doc/fzf/examples/key-bindings.bash
-fi
-if [ -f /usr/share/doc/fzf/examples/completion.bash ]; then
-  source /usr/share/doc/fzf/examples/completion.bash
-fi
-if [ -f /usr/share/fzf/key-bindings.bash ]; then
-  source /usr/share/fzf/key-bindings.bash
-fi
-if [ -f /usr/share/fzf/completion.bash ]; then
-  source /usr/share/fzf/completion.bash
+if [ "$_dot_interactive" -eq 1 ] && [ "$_dot_shell_name" = "zsh" ]; then
+  for f in \
+    /usr/share/doc/fzf/examples/key-bindings.zsh \
+    /usr/share/fzf/key-bindings.zsh \
+    "$HOME/.fzf/shell/key-bindings.zsh" \
+    "${HOMEBREW_PREFIX:-}/opt/fzf/shell/key-bindings.zsh"
+  do
+    [ -f "$f" ] && . "$f"
+  done
+  for f in \
+    /usr/share/doc/fzf/examples/completion.zsh \
+    /usr/share/fzf/completion.zsh \
+    "$HOME/.fzf/shell/completion.zsh" \
+    "${HOMEBREW_PREFIX:-}/opt/fzf/shell/completion.zsh"
+  do
+    [ -f "$f" ] && . "$f"
+  done
+elif [ "$_dot_interactive" -eq 1 ]; then
+  for f in \
+    /usr/share/doc/fzf/examples/key-bindings.bash \
+    /usr/share/fzf/key-bindings.bash \
+    "$HOME/.fzf/shell/key-bindings.bash" \
+    "${HOMEBREW_PREFIX:-}/opt/fzf/shell/key-bindings.bash"
+  do
+    [ -f "$f" ] && . "$f"
+  done
+  for f in \
+    /usr/share/doc/fzf/examples/completion.bash \
+    /usr/share/fzf/completion.bash \
+    "$HOME/.fzf/shell/completion.bash" \
+    "${HOMEBREW_PREFIX:-}/opt/fzf/shell/completion.bash"
+  do
+    [ -f "$f" ] && . "$f"
+  done
 fi
 
 # zoxide smart cd
 if command -v zoxide >/dev/null 2>&1; then
-  eval "$(zoxide init bash)"
+  eval "$(zoxide init "$_dot_shell_name")"
 fi
 
 # Prefer modern ls if present; fall back to ls
@@ -62,8 +110,8 @@ alias v='${EDITOR:-nvim}'
 command -v nnn >/dev/null 2>&1 && alias n='nnn -deH'
 
 # Dev shortcuts
-alias dev='cd ~/Dev'
-alias proj='cd ~/Dev/Projects'
+alias dev='cd ~/dev'
+alias proj='cd ${DOTFILES_PROJECTS_DIR:-$HOME/dev}'
 
 # Cross-platform opener: o <path>
 o() {
@@ -80,9 +128,6 @@ csv() {
   if command -v csvview >/dev/null 2>&1; then csvview "$@"; else column -s, -t "$1" | less -S; fi
 }
 
-# User bin paths
-export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.linuxbrew/bin:$HOME/scripts:$PATH"
-
 # Auto-activate Python .venv when entering a directory; deactivate when leaving
 _auto_venv() {
   if [ -n "$VIRTUAL_ENV" ] && [ ! -e "$PWD/.venv/bin/activate" ]; then
@@ -91,20 +136,27 @@ _auto_venv() {
     . "$PWD/.venv/bin/activate" 2>/dev/null || true
   fi
 }
-case ";$PROMPT_COMMAND;" in
-  *"_auto_venv"*) : ;;
-  *) PROMPT_COMMAND="_auto_venv; ${PROMPT_COMMAND}" ;;
- esac
+if [ "$_dot_shell_name" = "zsh" ]; then
+  autoload -Uz add-zsh-hook 2>/dev/null || true
+  add-zsh-hook chpwd _auto_venv 2>/dev/null || true
+  add-zsh-hook precmd _auto_venv 2>/dev/null || true
+else
+  case ";${PROMPT_COMMAND:-};" in
+    *"_auto_venv"*) : ;;
+    *) PROMPT_COMMAND="_auto_venv; ${PROMPT_COMMAND:-}" ;;
+   esac
+fi
 
-# Project picker: jump to a project under ~/Dev/Projects
+# Project picker: jump to a project under ~/dev by default
 pp() {
   local dir
   command -v fzf >/dev/null 2>&1 || { echo "fzf not installed"; return 1; }
   command -v fd >/dev/null 2>&1 || command -v fdfind >/dev/null 2>&1 || { echo "fd/fdfind not installed"; return 1; }
+  local projects_dir="${DOTFILES_PROJECTS_DIR:-$HOME/dev}"
   if command -v fd >/dev/null 2>&1; then
-    dir=$(fd -t d -d 3 . "$HOME/Dev/Projects" 2>/dev/null | fzf)
+    dir=$(fd -t d -d 3 . "$projects_dir" 2>/dev/null | fzf)
   else
-    dir=$(fdfind -t d -d 3 . "$HOME/Dev/Projects" 2>/dev/null | fzf)
+    dir=$(fdfind -t d -d 3 . "$projects_dir" 2>/dev/null | fzf)
   fi
   [ -n "$dir" ] && cd "$dir"
 }
@@ -117,12 +169,12 @@ alias uvt='uv run pytest -q'
 # Minimal project bootstrap helpers
 mkpy() { # mkpy <name>
   [ -n "$1" ] || { echo "Usage: mkpy <name>"; return 1; }
-  local dir="$HOME/Dev/Projects/$1"; mkdir -p "$dir" && cd "$dir" || return 1
+  local dir="${DOTFILES_PROJECTS_DIR:-$HOME/dev}/$1"; mkdir -p "$dir" && cd "$dir" || return 1
   uv init . && uv venv && uv sync
 }
 mkjs() { # mkjs <name>
   [ -n "$1" ] || { echo "Usage: mkjs <name>"; return 1; }
-  local dir="$HOME/Dev/Projects/$1"; mkdir -p "$dir" && cd "$dir" || return 1
+  local dir="${DOTFILES_PROJECTS_DIR:-$HOME/dev}/$1"; mkdir -p "$dir" && cd "$dir" || return 1
   if command -v corepack >/dev/null 2>&1; then corepack enable >/dev/null 2>&1 || true; fi
   if command -v pnpm >/dev/null 2>&1 || corepack prepare pnpm@latest --activate >/dev/null 2>&1; then
     pnpm init -y
@@ -130,3 +182,4 @@ mkjs() { # mkjs <name>
     npm init -y
   fi
 }
+unset _dot_shell_name _dot_interactive

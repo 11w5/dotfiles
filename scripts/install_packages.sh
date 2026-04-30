@@ -51,10 +51,6 @@ install_apt() {
   if [ ${#pkgs[@]} -gt 0 ]; then
     echo "[apt] Installing: ${pkgs[*]}"
     DEBIAN_FRONTEND=noninteractive $SUDO apt-get install -y "${pkgs[@]}"
-    # fd alias on Ubuntu, if needed
-    if command -v fdfind >/dev/null 2>&1 && ! command -v fd >/dev/null 2>&1; then
-      echo "alias fd='fdfind'" >> "$HOME/.bashrc.d/10-dev-env.sh"
-    fi
     command -v tldr >/dev/null 2>&1 && tldr -u || true
   else
     echo "[apt] No packages listed."
@@ -134,6 +130,41 @@ install_cargo() {
   cargo install ${pkgs[*]} || true
 }
 
+install_visual_extras() {
+  local extras
+
+  if ! command -v starship >/dev/null 2>&1; then
+    if command -v curl >/dev/null 2>&1; then
+      echo "[starship] Installing to $HOME/.local/bin"
+      mkdir -p "$HOME/.local/bin"
+      curl -fsSL https://starship.rs/install.sh | sh -s -- -y -b "$HOME/.local/bin" || true
+    else
+      echo "[starship] curl not found; skipping Starship install."
+    fi
+  fi
+
+  extras=()
+  command -v eza >/dev/null 2>&1 || extras+=(eza)
+  [ ${#extras[@]} -gt 0 ] || return 0
+
+  if command -v brew >/dev/null 2>&1; then
+    echo "[brew] Installing visual shell extras: ${extras[*]}"
+    brew install "${extras[@]}" || true
+    return 0
+  fi
+
+  if command -v cargo >/dev/null 2>&1; then
+    echo "[cargo] Installing visual shell extras: ${extras[*]}"
+    for p in "${extras[@]}"; do
+      cargo install "$p" --locked || true
+    done
+    return 0
+  fi
+
+  echo "[extras] Missing optional visual tools: ${extras[*]}"
+  echo "[extras] Install Homebrew or Rust/Cargo, then rerun this script for the full prompt setup."
+}
+
 if command -v apt-get >/dev/null 2>&1; then
   install_apt
 elif command -v brew >/dev/null 2>&1; then
@@ -144,5 +175,6 @@ fi
 install_pipx
 install_npm
 install_cargo
+install_visual_extras
 
 echo "Done. You may need to restart your shell."

@@ -8,6 +8,7 @@ stow
 build-essential
 
 # CLI core
+zsh
 tmux
 fzf
 zoxide
@@ -17,7 +18,7 @@ bat
 jq
 tree
 tldr
+starship
 
 # Editor
 neovim
-
