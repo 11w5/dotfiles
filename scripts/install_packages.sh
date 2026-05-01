@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
 # Installs packages from packages/*.txt:
 # - apt.txt via apt-get
@@ -9,6 +10,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROFILE="${DOTFILES_PROFILE:-full}"
+ALLOW_REMOTE_INSTALLERS="${DOTFILES_ALLOW_REMOTE_INSTALLERS:-0}"
 
 # Choose package lists by profile
 APT_LIST="$ROOT/packages/apt.txt"
@@ -24,8 +26,10 @@ PIPX_LIST="$ROOT/packages/pipx.txt"
 NPM_LIST="$ROOT/packages/npm.txt"
 CARGO_LIST="$ROOT/packages/cargo.txt"
 
-echo "[install_packages] Using ROOT=$ROOT"
-echo "[install_packages] Profile=$PROFILE"
+log() { printf '[install_packages] %s\n' "$*"; }
+
+log "Using ROOT=$ROOT"
+log "Profile=$PROFILE"
 
 # sudo helper
 SUDO=""
@@ -66,8 +70,8 @@ install_brew() {
   mapfile -t pkgs < <(sed -e 's/#.*$//' -e '/^\s*$/d' "$BREW_LIST")
   if [ ${#pkgs[@]} -gt 0 ]; then
     echo "[brew] Installing: ${pkgs[*]}"
-    brew update || true
-    brew install "${pkgs[@]}" || true
+    brew update
+    brew install "${pkgs[@]}"
   else
     echo "[brew] No packages listed."
   fi
@@ -77,11 +81,16 @@ ensure_pipx() {
   if command -v pipx >/dev/null 2>&1; then return 0; fi
   if command -v apt-get >/dev/null 2>&1; then
     $SUDO apt-get update -y
-    $SUDO apt-get install -y pipx || true
+    $SUDO apt-get install -y pipx
   fi
   if ! command -v pipx >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
-    python3 -m pip install --user pipx || true
-    python3 -m pipx ensurepath || true
+    if [ "$ALLOW_REMOTE_INSTALLERS" = "1" ]; then
+      python3 -m pip install --user pipx
+      python3 -m pipx ensurepath
+    else
+      echo "[pipx] pipx missing; skipping Python package installs."
+      echo "[pipx] Install pipx with apt/brew or set DOTFILES_ALLOW_REMOTE_INSTALLERS=1."
+    fi
   fi
 }
 
@@ -94,9 +103,13 @@ install_pipx() {
     echo "[pipx] pipx not available; skipping."
     return 0
   fi
+  [ "$ALLOW_REMOTE_INSTALLERS" = "1" ] || {
+    echo "[pipx] Skipping remote Python installs. Set DOTFILES_ALLOW_REMOTE_INSTALLERS=1 to allow."
+    return 0
+  }
   echo "[pipx] Installing: ${pkgs[*]}"
   for p in "${pkgs[@]}"; do
-    pipx install "$p" || pipx upgrade "$p" || true
+    pipx install "$p" || pipx upgrade "$p"
   done
 }
 
@@ -107,15 +120,19 @@ install_npm() {
   if ! command -v npm >/dev/null 2>&1; then
     if command -v apt-get >/dev/null 2>&1; then
       $SUDO apt-get update -y
-      $SUDO apt-get install -y npm || true
+      $SUDO apt-get install -y npm
     fi
   fi
   if ! command -v npm >/dev/null 2>&1; then
     echo "[npm] npm not available; skipping."
     return 0
   fi
+  [ "$ALLOW_REMOTE_INSTALLERS" = "1" ] || {
+    echo "[npm] Skipping global npm installs. Set DOTFILES_ALLOW_REMOTE_INSTALLERS=1 to allow."
+    return 0
+  }
   echo "[npm] Installing globally: ${pkgs[*]}"
-  npm -g install "${pkgs[@]}" || true
+  npm -g install "${pkgs[@]}"
 }
 
 install_cargo() {
@@ -126,20 +143,25 @@ install_cargo() {
     echo "[cargo] cargo not found; install Rust toolchain (https://rustup.rs). Skipping."
     return 0
   fi
+  [ "$ALLOW_REMOTE_INSTALLERS" = "1" ] || {
+    echo "[cargo] Skipping cargo installs. Set DOTFILES_ALLOW_REMOTE_INSTALLERS=1 to allow."
+    return 0
+  }
   echo "[cargo] Installing: ${pkgs[*]}"
-  cargo install ${pkgs[*]} || true
+  cargo install "${pkgs[@]}"
 }
 
 install_visual_extras() {
   local extras
 
   if ! command -v starship >/dev/null 2>&1; then
-    if command -v curl >/dev/null 2>&1; then
+    if command -v curl >/dev/null 2>&1 && [ "$ALLOW_REMOTE_INSTALLERS" = "1" ]; then
       echo "[starship] Installing to $HOME/.local/bin"
       mkdir -p "$HOME/.local/bin"
-      curl -fsSL https://starship.rs/install.sh | sh -s -- -y -b "$HOME/.local/bin" || true
+      curl -fsSL https://starship.rs/install.sh | DOTFILES_ALLOW_REMOTE_INSTALLERS=1 sh -s -- -y -b "$HOME/.local/bin"
     else
-      echo "[starship] curl not found; skipping Starship install."
+      echo "[starship] Missing from package manager path; skipping remote installer."
+      echo "[starship] Set DOTFILES_ALLOW_REMOTE_INSTALLERS=1 if you want the upstream install script."
     fi
   fi
 
@@ -149,14 +171,14 @@ install_visual_extras() {
 
   if command -v brew >/dev/null 2>&1; then
     echo "[brew] Installing visual shell extras: ${extras[*]}"
-    brew install "${extras[@]}" || true
+    brew install "${extras[@]}"
     return 0
   fi
 
-  if command -v cargo >/dev/null 2>&1; then
+  if command -v cargo >/dev/null 2>&1 && [ "$ALLOW_REMOTE_INSTALLERS" = "1" ]; then
     echo "[cargo] Installing visual shell extras: ${extras[*]}"
     for p in "${extras[@]}"; do
-      cargo install "$p" --locked || true
+      cargo install "$p" --locked
     done
     return 0
   fi

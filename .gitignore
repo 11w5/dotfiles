@@ -1,0 +1,20 @@
+# Local machine state
+.adopt_backup_*/
+SYSTEM_SPECS*.md
+*.private.*
+*.local
+
+# Secret-bearing files. Keep examples in git, never the real files.
+.env
+.env.*
+!.env.example
+id_*
+*.pem
+*.key
+*.p12
+*.pfx
+*.kdbx
+
+# Tool caches
+.cache/
+.DS_Store

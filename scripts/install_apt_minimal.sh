@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
-sudo apt-get update
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+
+SUDO=""
+if [ "${EUID:-$(id -u)}" -ne 0 ]; then
+  command -v sudo >/dev/null 2>&1 || { echo "sudo required for apt installs" >&2; exit 1; }
+  SUDO=sudo
+fi
+
+$SUDO apt-get update
+$SUDO DEBIAN_FRONTEND=noninteractive apt-get install -y \
   tmux fzf zoxide ripgrep fd-find bat nnn ranger mc \
   neovim jq tree tldr python3-venv python3-pip
 # fd alias on Ubuntu

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
 # Bootstrap symlinks using GNU Stow with OS/host awareness and optional adopt
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -72,7 +73,13 @@ stow "${STOW_OPTS[@]}" "${PKGS[@]}"
 
 # Ensure .bashrc sources ~/.bashrc.d/*.sh
 if ! grep -q "bashrc.d" "$HOME/.bashrc" 2>/dev/null; then
-  printf '\n# Load additional bash configs\nfor f in "$HOME"/.bashrc.d/*.sh; do [ -r "$f" ] && . "$f"; done\n' >> "$HOME/.bashrc"
+  cat >> "$HOME/.bashrc" <<'BASHRC'
+
+# Load managed bash configs
+for f in "$HOME"/.bashrc.d/*.sh; do
+  [ -f "$f" ] && [ -r "$f" ] && . "$f"
+done
+BASHRC
 fi
 
 echo "Stow bootstrap complete. Open a new shell or run: source ~/.bashrc"

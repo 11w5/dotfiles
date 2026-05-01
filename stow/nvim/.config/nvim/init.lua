@@ -19,6 +19,10 @@ vim.g.loaded_netrwPlugin = 1
 local lazypath = vim.fn.stdpath('data') .. '/lazy/lazy.nvim'
 local uv = vim.uv or vim.loop
 if not (uv and uv.fs_stat and uv.fs_stat(lazypath)) then
+  if vim.env.DOTFILES_NVIM_BOOTSTRAP ~= '1' then
+    vim.notify('lazy.nvim is not installed. Rerun with DOTFILES_NVIM_BOOTSTRAP=1 to allow network bootstrap.', vim.log.levels.ERROR)
+    return
+  end
   vim.fn.system({ 'git', 'clone', '--filter=blob:none', 'https://github.com/folke/lazy.nvim.git', '--branch=stable', lazypath })
 end
 vim.opt.rtp:prepend(lazypath)

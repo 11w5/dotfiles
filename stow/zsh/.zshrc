@@ -1,7 +1,5 @@
 # Portable Zsh startup managed by ~/dotfiles.
 
-export ZSH_DISABLE_COMPFIX=true
-
 HISTFILE="${HISTFILE:-$HOME/.zsh_history}"
 HISTSIZE="${HISTSIZE:-50000}"
 SAVEHIST="${SAVEHIST:-50000}"
@@ -9,16 +7,17 @@ SAVEHIST="${SAVEHIST:-50000}"
 setopt AUTO_CD
 setopt AUTO_PUSHD
 setopt HIST_IGNORE_ALL_DUPS
+setopt HIST_IGNORE_SPACE
+setopt HIST_NO_STORE
 setopt HIST_REDUCE_BLANKS
 setopt INC_APPEND_HISTORY
-setopt SHARE_HISTORY
 
 autoload -Uz colors compinit
 colors
 
 _zsh_cache="${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
 mkdir -p "$HOME/.bashrc.d" "$_zsh_cache"
-compinit -i -d "$_zsh_cache/zcompdump-${ZSH_VERSION}"
+compinit -d "$_zsh_cache/zcompdump-${ZSH_VERSION}"
 unset _zsh_cache
 
 zstyle ':completion:*' menu select

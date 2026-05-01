@@ -1,251 +1,150 @@
-# Dotfiles (Terminal Dev)
+# Dotfiles
 
-Minimal, navigation-first setup for Python (uv) and JS, tmux + Neovim.
+Net: this is a small, security-first terminal setup for Bash/Zsh, tmux,
+Neovim, Git, Starship, Ranger, and a few project helpers.
 
-## Contents
-- bashrc.d/: shell aliases, navigation helpers, uv helpers (mkpy/mkjs)
-- tmux.conf: tmux with Ctrl-a prefix and TPM plugins; Prefix+e toggles Neovim tree
-- nvim/: minimal Neovim config with file tree, Telescope, LSP, Treesitter
-- zsh/: portable Zsh startup with Starship prompt fallback
-- starship/: compact prompt theme for repo, Python, Node, and command duration
-- ranger/: basic config (optional)
-- scripts/: tmux IDE helpers, specs updater, corepack setup
-- Dev/start-dev.sh: default tmux session launcher
+The important constraint is simple: this repo is public configuration only.
+No secrets, no private keys, no local machine inventory, and no tracked personal
+identity.
 
-## Quick start on a new machine
+## Security Model
 
-Zero‑thought install (recommended)
-  curl -fsSL https://raw.githubusercontent.com/11w5/dotfiles/main/install.sh | bash
+1. `stow/` is the only canonical dotfile tree.
+2. `~/.gitconfig.local` owns private Git identity.
+3. Remote package installers are off by default.
+4. Generated local files stay out of git.
+5. SSH setup prefers an existing agent-backed key and will not create an empty
+   passphrase key.
 
-The installer will:
-- Install minimal deps (git, stow, curl, unzip) via apt/brew when available.
-- Clone/update to ~/dotfiles.
-- Stow configs and install curated packages + CSV tools.
-- Install/link Bash, Zsh, Starship, tmux, Neovim, git, and helper scripts.
-- Respect profiles (DOTFILES_PROFILE=minimal|server|full) for package selection.
+Read [SECURITY.md](SECURITY.md) before adding new machine-specific config.
 
-1) Clone the repo:
-   # HTTPS
-   ```bash
-   git clone https://github.com/11w5/dotfiles.git ~/dotfiles
-   cd ~/dotfiles
-   ```
-   # Or SSH (after adding an SSH key to GitHub)
-  ```bash
-   git clone git@github.com:11w5/dotfiles.git ~/dotfiles && cd ~/dotfiles
-  ```
-3) Option A — Stow-based bootstrap (recommended):
-   # Creates symlinks to your home with GNU Stow
-   ./scripts/bootstrap_stow.sh
+## Install
 
-   Option B — Legacy bootstrap (simple symlinks):
-   ./bootstrap.sh
+Manual install is the default path:
 
-4) Start working:
-   source ~/.bashrc
-   ~/Dev/start-dev.sh [project]
-
-   Optional Zsh login shell:
-   ```bash
-   chsh -s "$(command -v zsh)"
-   ```
-
-Project helpers (optional):
-- mkpy myproj  # Create a Python project with uv init + venv
-- mkjs myapp   # Create a JS project with pnpm (via corepack) or npm
-- pp           # Pick a project under ${DOTFILES_PROJECTS_DIR:-~/dev}
-
-tmux tips:
-- Prefix is Ctrl-a; Prefix + e toggles file tree in current Neovim pane.
-- Use ~/scripts/tmux_ide.sh <project> to open a project IDE.
-
-## System packages and CLI tools
-
-There are two options depending on how much you want installed:
-
-- Minimal essentials (apt):
-  ./scripts/install_apt_minimal.sh
-
-- Curated package sets + CSV tools:
-  ./scripts/install_packages.sh          # installs from packages/ lists (apt/pipx/npm/cargo)
-  ./scripts/install_csv_tools.sh         # installs duckdb, xsv, and a csvview helper
-
-Customize the lists under packages/:
-- packages/apt.txt   — apt packages (Ubuntu/Debian)
-- packages/pipx.txt  — Python CLIs installed with pipx (user-local)
-- packages/npm.txt   — global npm packages (optional)
-- packages/cargo.txt — Rust cargo installs (optional)
-
-One-liner (Ubuntu/Mac):
- ./scripts/bootstrap_stow.sh && ./scripts/install_packages.sh && ./scripts/install_csv_tools.sh
-
-CSV exploration tips:
-- Interactive: vd data.csv (arrow keys, / search, , filter, s sort)
-- Pretty table: csvview data.csv (aligned columns; left/right to scroll)
-- SQL on CSV: duckdb -c "select * from read_csv_auto('data.csv') limit 50"
-
-## Install Across OSes
-
-Ubuntu/Debian (fresh machine)
-```
-sudo apt-get update && sudo apt-get install -y git stow curl unzip ca-certificates
-git clone https://github.com/11w5/dotfiles.git ~/dotfiles && cd ~/dotfiles
+```bash
+git clone https://github.com/11w5/dotfiles.git ~/dotfiles
+cd ~/dotfiles
 ./scripts/bootstrap_stow.sh
-./scripts/install_packages.sh
-./scripts/install_csv_tools.sh
 ```
 
-macOS (Homebrew)
-```
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"  # if brew missing
-brew install git stow
-git clone https://github.com/11w5/dotfiles.git ~/dotfiles && cd ~/dotfiles
-./scripts/bootstrap_stow.sh
-./scripts/install_packages.sh
-./scripts/install_csv_tools.sh
+The remote installer is intentionally conservative. It bootstraps links only:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/11w5/dotfiles/main/install.sh | bash
 ```
 
-WSL / Remote Ubuntu
-```
-sudo apt-get update && sudo apt-get install -y git stow
-git clone https://github.com/11w5/dotfiles.git ~/dotfiles && cd ~/dotfiles
-./scripts/bootstrap_stow.sh
-./scripts/install_packages.sh
-./scripts/install_csv_tools.sh
+Opt into package installs explicitly:
+
+```bash
+DOTFILES_INSTALL_PACKAGES=1 ./install.sh
+DOTFILES_INSTALL_CSV=1 ./install.sh
 ```
 
-If `apt` does not provide `starship` or `eza` on an older Ubuntu release, install Homebrew/Linuxbrew and rerun `./scripts/install_packages.sh`, or install those tools manually. The shell config has plain fallbacks when they are missing.
+Remote language/package installers stay blocked unless you also set:
 
-No sudo / no stow available
-- Use the legacy bootstrap: `./bootstrap.sh` (creates direct symlinks without stow)
-- You can still run: `./scripts/install_csv_tools.sh` (writes to ~/.local/bin if needed)
-
-Installer options
-- Set environment variables before running the installer:
-  - `DOTFILES_DIR=~/mydot curl -fsSL https://raw.githubusercontent.com/11w5/dotfiles/main/install.sh | bash`
-  - `NO_PKGS=1 NO_CSV=1 curl -fsSL https://raw.githubusercontent.com/11w5/dotfiles/main/install.sh | bash`
-  - `DOTFILES_PROFILE=minimal curl -fsSL https://raw.githubusercontent.com/11w5/dotfiles/main/install.sh | bash`
-- Or pass flags when running locally:
-  - `./install.sh --dir ~/mydot --branch main --no-packages --no-csv --profile minimal`
-
-## Make targets
-
-Shortcuts for common flows:
-- `make bootstrap`  — stow link all packages
-- `make packages`   — install apt/brew + pipx/npm/cargo from packages/*
-- `make csv`        — install duckdb, xsv (best‑effort) and csvview
-- `make full`       — bootstrap + packages + csv
-- `make ssh`        — generate SSH key, upload via gh, set origin to SSH
-- `make publish`    — publish/push to GitHub (token flow fallback)
-- `make update`     — git pull + restow
-- `make uninstall`  — destow all packages
-
-## Stow layout
-
-Packages live under stow/ and mirror their destinations under $HOME:
-- stow/bash/.bashrc.d/*            -> ~/.bashrc.d/*
-- stow/zsh/.zshrc                  -> ~/.zshrc
-- stow/starship/.config/starship.toml -> ~/.config/starship.toml
-- stow/tmux/.tmux.conf             -> ~/.tmux.conf
-- stow/nvim/.config/nvim/init.lua  -> ~/.config/nvim/init.lua
-- stow/ranger/.config/ranger/*     -> ~/.config/ranger/*
-- stow/scripts/scripts/*           -> ~/scripts/*
-- stow/dev/Dev/start-dev.sh        -> ~/Dev/start-dev.sh
- - stow/editor/.editorconfig       -> ~/.editorconfig
- - stow/git/.gitignore_global      -> ~/.gitignore_global
-
-Optional OS/host overrides (create dirs if needed):
-- stow/os-linux, stow/os-macos, stow/os-wsl
-- stow/host-<your-hostname>
-
-Add or remove packages by editing the stow/* trees, then rerun:
-  stow -d stow -t "$HOME" <pkg1> <pkg2> ...
-
-Update on an existing machine
-```
-cd ~/dotfiles && git pull
-stow -d stow -t "$HOME" -R bash zsh starship tmux nvim ranger scripts dev git editor
+```bash
+DOTFILES_ALLOW_REMOTE_INSTALLERS=1
 ```
 
-Unstow (remove symlinks)
-```
-stow -d stow -t "$HOME" -D <pkg>
-```
+Neovim will not clone `lazy.nvim` on first launch unless you allow that one-time
+bootstrap:
 
-Adopt existing files into the repo
-```
-# Moves your current dotfiles into the stow tree and links them back.
-# Creates a timestamped backup folder under the repo.
-./scripts/stow_adopt.sh
+```bash
+DOTFILES_NVIM_BOOTSTRAP=1 nvim
 ```
 
-## Philosophy
+Unverified GitHub binary downloads for DuckDB/xsv stay blocked unless you set:
 
-- Light: small, fast configs; lazy-load heavy tools; no frameworks required.
-- Efficient: short, memorable aliases; project pickers (pp); auto-venv.
-- Interoperable: works on Ubuntu, macOS, WSL; both Bash and Zsh.
-- Portable: single stow/ layout; installers read package lists.
-
-Cross-platform specifics:
-- Shell: Zsh sources the same ~/.bashrc.d scripts for shared behavior.
-- Package install: apt on Ubuntu, brew on macOS/Linuxbrew; pipx/npm/cargo optional.
-- Clipboard: tmux uses OSC52, which works over SSH and tmux.
-
-## Commands Cheat Sheet
-
-- dev: jump to `~/dev`
-- proj: jump to `${DOTFILES_PROJECTS_DIR:-~/dev}`
-- pp: project picker (fzf + fd/fdfind)
-- mkpy <name>: Python project with uv (init + venv + sync)
-- mkjs <name>: JS project (pnpm via corepack if available; else npm)
-- v: open `$EDITOR` (nvim)
-- o <path>: open in system file browser (macOS open, WSL wslview, Linux xdg-open/gio)
-- csv <file.csv>: quick aligned table (uses csvview/column)
-- vd data.csv: interactive CSV exploration
-- csvview data.csv: pretty table with horizontal scroll
-- duckdb -c "select * from read_csv_auto('data.csv') limit 50": SQL on CSV
-
-## Troubleshooting
-
-- stow: command not found
-  - Install with your package manager (Ubuntu: `sudo apt-get install stow`, macOS: `brew install stow`).
-  - Or run the legacy `./bootstrap.sh` to create symlinks without stow.
-
-- `fd` not found on Ubuntu
-  - Package is `fd-find` on Ubuntu; an alias is added automatically to map `fd` → `fdfind`.
-
-- `xsv` download fails in install_csv_tools.sh
-  - The script falls back to `csvlook` (csvkit) or `column` if `xsv` cannot be fetched.
-
-- PATH doesn’t include `~/.local/bin`
-  - `bootstrap_stow.sh` and the installers append it to `~/.bashrc` when needed. Restart shell or: `export PATH="$HOME/.local/bin:$PATH"`.
- 
- - Use a different profile (fewer packages)
-   - `DOTFILES_PROFILE=minimal ./install.sh` or set in your shell: `export DOTFILES_PROFILE=minimal`
-
-## Publish/Sync (optional)
-
-First publish to GitHub (if not already):
-```
-# Using gh CLI with token (no browser):
-~/scripts/github_publish_token.sh
-
-# If remote exists but push failed earlier:
-~/scripts/github_fix_remote_push.sh
+```bash
+DOTFILES_ALLOW_UNVERIFIED_DOWNLOADS=1
 ```
 
-On a new machine:
+## Local Git Identity
+
+Create `~/.gitconfig.local`:
+
+```ini
+[user]
+    name = Your Name
+    email = you@example.com
 ```
-git clone https://github.com/11w5/dotfiles.git ~/dotfiles && cd ~/dotfiles
-./scripts/bootstrap_stow.sh && ./scripts/install_packages.sh && ./scripts/install_csv_tools.sh
+
+Use `.gitconfig.local.example` as the template. The real file is ignored.
+
+## Make Targets
+
+```bash
+make bootstrap     # stow link dotfiles
+make restow        # restow canonical packages
+make packages      # install apt/brew packages, plus opt-in language installers
+make csv           # install CSV helpers, with remote binaries opt-in
+make ssh           # configure/test GitHub SSH without weak key generation
+make audit         # run local security audit
+make update        # ff-only pull + restow
+make uninstall     # destow packages
 ```
 
-Chezmoi note:
-- This repo currently uses GNU Stow because it is transparent, easy to inspect, and already structured for new-machine bootstrap.
-- Use chezmoi later only if you need encrypted templated secrets, machine-specific templates, or more complex per-host conditionals.
+## Layout
 
-## CI
+```text
+stow/bash/.bashrc.d/*              -> ~/.bashrc.d/*
+stow/zsh/.zshrc                    -> ~/.zshrc
+stow/starship/.config/starship.toml -> ~/.config/starship.toml
+stow/tmux/.tmux.conf               -> ~/.tmux.conf
+stow/nvim/.config/nvim/init.lua    -> ~/.config/nvim/init.lua
+stow/ranger/.config/ranger/*       -> ~/.config/ranger/*
+stow/scripts/scripts/*             -> ~/scripts/*
+stow/dev/Dev/start-dev.sh          -> ~/Dev/start-dev.sh
+stow/editor/.editorconfig          -> ~/.editorconfig
+stow/git/.gitconfig                -> ~/.gitconfig
+stow/git/.gitignore_global         -> ~/.gitignore_global
+```
 
-This repo includes a minimal CI that:
-- Runs shellcheck on scripts.
-- Executes `install.sh` with `--no-packages --no-csv` to validate stow linking.
+Optional overlays can live under `stow/os-linux`, `stow/os-macos`,
+`stow/os-wsl`, or `stow/host-<hostname>` when needed.
+
+## Daily Commands
+
+```bash
+dev                 # cd ~/dev
+proj                # cd ${DOTFILES_PROJECTS_DIR:-~/dev}
+pp                  # fuzzy project picker
+mkpy name           # uv Python project
+mkjs name           # JS project through pnpm/corepack or npm
+v                   # $EDITOR
+o path              # open in the OS file browser
+csv file.csv        # quick CSV view
+~/Dev/start-dev.sh  # tmux dev session
+```
+
+## SSH
+
+Default:
+
+```bash
+./scripts/setup_ssh_github.sh
+```
+
+That expects an existing loaded SSH key, including a 1Password-backed key.
+
+Generate a new encrypted key only when needed:
+
+```bash
+./scripts/setup_ssh_github.sh --generate --upload
+```
+
+The script requires strict known-host checking. On a new machine, verify the
+GitHub host key fingerprint before adding it to `known_hosts`.
+
+## Audit
+
+Run this before commits:
+
+```bash
+./scripts/security_audit.sh
+```
+
+It checks Bash syntax, optional ShellCheck output, tracked file modes, obvious
+secret patterns, passphrase-less SSH generation, remote installer guards, and
+duplicate script drift.

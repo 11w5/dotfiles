@@ -1,24 +1,36 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
-# Generate an SSH key (ed25519), optionally upload to GitHub via gh,
-# and switch this repo's origin to SSH.
+# Configure GitHub SSH without creating weak local identity material.
+#
+# Default behavior:
+# - Prefer an existing agent-backed key.
+# - Upload an existing public key with gh when requested.
+# - Set this repo's origin to SSH.
+#
+# Key generation is opt-in and prompts for a passphrase unless explicitly
+# overridden. Passphrase-less keys are not allowed by this repo policy.
 
-EMAIL_DEFAULT="sloan@wombleco.com"
+EMAIL_DEFAULT="$(git config --global user.email 2>/dev/null || printf 'git@localhost')"
 KEY_PATH_DEFAULT="$HOME/.ssh/id_ed25519"
 LABEL_DEFAULT="$(hostname)-$(date +%Y%m%d)"
 
 EMAIL="$EMAIL_DEFAULT"
 KEY_PATH="$KEY_PATH_DEFAULT"
 LABEL="$LABEL_DEFAULT"
+GENERATE=0
+UPLOAD=0
+SET_REMOTE=1
 
 usage() {
   cat <<USAGE
-Usage: $0 [--email EMAIL] [--key-path PATH] [--label TITLE]
+Usage: $0 [--generate] [--upload] [--email EMAIL] [--key-path PATH] [--label TITLE] [--no-remote]
 
 Examples:
-  $0                          # use defaults, generate/upload, set remote
-  $0 --email you@example.com  # override email for key comment
+  $0                          # use existing SSH agent/key, test GitHub, set remote
+  $0 --upload                  # upload existing public key with gh
+  $0 --generate --upload       # generate a passphrase-protected key, upload it
 USAGE
 }
 
@@ -28,50 +40,69 @@ while [ $# -gt 0 ]; do
     --email) EMAIL="$2"; shift 2;;
     --key-path) KEY_PATH="$2"; shift 2;;
     --label) LABEL="$2"; shift 2;;
+    --generate) GENERATE=1; shift;;
+    --upload) UPLOAD=1; shift;;
+    --no-remote) SET_REMOTE=0; shift;;
     *) echo "Unknown arg: $1" >&2; usage; exit 1;;
   esac
 done
 
-mkdir -p "$(dirname "$KEY_PATH")"
-if [ ! -f "$KEY_PATH" ]; then
-  echo "[ssh] Generating key: $KEY_PATH (ed25519)"
-  ssh-keygen -t ed25519 -C "$EMAIL" -f "$KEY_PATH" -N ""
-else
-  echo "[ssh] Key exists: $KEY_PATH (skipping generation)"
+mkdir -p -m 700 "$(dirname "$KEY_PATH")"
+
+if [ "$GENERATE" -eq 1 ]; then
+  if [ -f "$KEY_PATH" ]; then
+    echo "[ssh] Key exists: $KEY_PATH (skipping generation)"
+  else
+    echo "[ssh] Generating encrypted ed25519 key: $KEY_PATH"
+    echo "[ssh] Enter a real passphrase when prompted. Empty passphrases are blocked."
+    ssh-keygen -t ed25519 -a 64 -C "$EMAIL" -f "$KEY_PATH"
+    chmod 600 "$KEY_PATH"
+    chmod 644 "$KEY_PATH.pub"
+  fi
 fi
 
-# Ensure ssh-agent and add key
-if [ -z "${SSH_AUTH_SOCK:-}" ]; then
-  eval "$(ssh-agent -s)" >/dev/null
+if [ -n "${SSH_AUTH_SOCK:-}" ] && ssh-add -l >/dev/null 2>&1; then
+  echo "[ssh] Existing agent has keys loaded."
+elif [ -f "$KEY_PATH" ]; then
+  if [ -z "${SSH_AUTH_SOCK:-}" ]; then
+    eval "$(ssh-agent -s)" >/dev/null
+  fi
+  echo "[ssh] Adding key to agent: $KEY_PATH"
+  ssh-add "$KEY_PATH"
+else
+  echo "[ssh] No loaded SSH agent key and no key at $KEY_PATH." >&2
+  echo "[ssh] Load a 1Password/agent-backed key, or rerun with --generate." >&2
+  exit 1
 fi
-ssh-add "$KEY_PATH" 2>/dev/null || true
 
 PUB_KEY_FILE="$KEY_PATH.pub"
-if [ ! -f "$PUB_KEY_FILE" ]; then
+if [ "$UPLOAD" -eq 1 ] && [ ! -f "$PUB_KEY_FILE" ]; then
   echo "Public key not found: $PUB_KEY_FILE" >&2
   exit 1
 fi
 
-# Upload key to GitHub using gh if available
-if command -v gh >/dev/null 2>&1; then
+if [ "$UPLOAD" -eq 1 ] && command -v gh >/dev/null 2>&1; then
   echo "[gh] Uploading SSH key to GitHub with title '$LABEL'"
-  gh ssh-key add "$PUB_KEY_FILE" --title "$LABEL" || {
-    echo "[gh] Failed to upload key automatically. You may need to add it manually." >&2
-  }
-else
-  echo "[info] gh not found. Add this key to GitHub (Settings → SSH keys):"
-  echo
-  cat "$PUB_KEY_FILE"
-  echo
+  gh ssh-key add "$PUB_KEY_FILE" --title "$LABEL"
+elif [ "$UPLOAD" -eq 1 ]; then
+  echo "[gh] gh not found; cannot upload key automatically." >&2
+  echo "[gh] Install/auth gh or add the public key manually." >&2
+  exit 1
 fi
 
-# Test SSH connection (accept new host key automatically once)
-echo "[ssh] Testing GitHub SSH connectivity…"
-ssh -T -o StrictHostKeyChecking=accept-new git@github.com || true
+echo "[ssh] Testing GitHub SSH connectivity"
+ssh_output="$(ssh -T -o StrictHostKeyChecking=yes git@github.com 2>&1)" || ssh_rc=$?
+ssh_rc="${ssh_rc:-0}"
+if [ "$ssh_rc" -ne 0 ] && ! printf '%s\n' "$ssh_output" | grep -qi 'successfully authenticated'; then
+  printf '%s\n' "$ssh_output" >&2
+  echo "[ssh] GitHub SSH test failed." >&2
+  echo "[ssh] If this is a new machine, add GitHub to known_hosts after verifying the host key fingerprint." >&2
+  exit "$ssh_rc"
+fi
+printf '%s\n' "$ssh_output"
 
-# Switch this repo's origin to SSH if we're inside the dotfiles repo
 REPO_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
-if [ -d "$REPO_DIR/.git" ]; then
+if [ "$SET_REMOTE" -eq 1 ] && [ -d "$REPO_DIR/.git" ]; then
   cd "$REPO_DIR"
   if git remote | grep -qx origin; then
     echo "[git] Setting origin to SSH"
@@ -82,5 +113,4 @@ if [ -d "$REPO_DIR/.git" ]; then
   echo "[git] Remote now: $(git remote get-url origin)"
 fi
 
-echo "[done] SSH key ready. Pushes via SSH are now enabled."
-
+echo "[done] GitHub SSH path is ready."

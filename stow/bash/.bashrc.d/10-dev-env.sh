@@ -1,6 +1,10 @@
 # Friendly defaults
 export EDITOR=${EDITOR:-nvim}
 export VISUAL=$EDITOR
+export HISTCONTROL=${HISTCONTROL:-ignoreboth:erasedups}
+export HISTFILESIZE=${HISTFILESIZE:-50000}
+export HISTSIZE=${HISTSIZE:-50000}
+export HISTIGNORE=${HISTIGNORE:-'*password*:*passwd*:*token*:*secret*:*api_key*:*apikey*:*client_secret*'}
 
 # User bin paths
 case ":$PATH:" in
@@ -97,9 +101,17 @@ if command -v fdfind >/dev/null 2>&1 && ! command -v fd >/dev/null 2>&1; then
 fi
 
 # Quick helpers
-mkcd() { mkdir -p "$1" && cd "$1"; }
+mkcd() {
+  [ $# -eq 1 ] || { echo "Usage: mkcd <dir>" >&2; return 1; }
+  mkdir -p "$1" && cd "$1"
+}
 # Fuzzy cd: list dirs, then cd
-fcd() { local dir; dir=$(fd -t d -H . 2>/dev/null | fzf) && cd "$dir"; }
+fcd() {
+  local dir finder
+  if command -v fd >/dev/null 2>&1; then finder=fd; elif command -v fdfind >/dev/null 2>&1; then finder=fdfind; else echo "fd/fdfind not installed" >&2; return 1; fi
+  command -v fzf >/dev/null 2>&1 || { echo "fzf not installed" >&2; return 1; }
+  dir=$("$finder" -t d -H . 2>/dev/null | fzf) && cd "$dir"
+}
 
 # Shortcuts
 alias gs='git status'
@@ -125,6 +137,7 @@ o() {
 
 # CSV quick view helper if csvview exists
 csv() {
+  [ $# -gt 0 ] || { echo "Usage: csv <file.csv>" >&2; return 1; }
   if command -v csvview >/dev/null 2>&1; then csvview "$@"; else column -s, -t "$1" | less -S; fi
 }
 

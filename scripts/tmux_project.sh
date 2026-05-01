@@ -2,9 +2,9 @@
 set -euo pipefail
 name=${1:-}
 [ -n "$name" ] || { echo "Usage: tmux_project.sh <project-dir>"; exit 1; }
-proj="$HOME/Dev/Projects/$name"
+proj="${DOTFILES_PROJECTS_DIR:-$HOME/dev}/$name"
 [ -d "$proj" ] || { echo "Project not found: $proj"; exit 1; }
-session="proj-$name"
+session="proj-$(basename "$name" | tr -c 'A-Za-z0-9_.-' '_')"
 if ! tmux has-session -t "$session" 2>/dev/null; then
   tmux new-session -d -s "$session" -n editor -c "$proj"
   tmux send-keys -t "$session":1 "${EDITOR:-nvim}" C-m

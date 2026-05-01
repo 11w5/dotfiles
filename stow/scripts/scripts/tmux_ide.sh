@@ -1,21 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# Usage: tmux_ide.sh <project-name-or-path>
-if [ $# -eq 0 ]; then
-  echo "Usage: $0 <project-name-or-path>" >&2
+# Usage: tmux_ide.sh <path-or-project-name>
+arg=${1:-}
+[ -n "$arg" ] || { echo "Usage: tmux_ide.sh <path-or-project-name>"; exit 1; }
+case "$arg" in
+  /*|.~*) proj=$(readlink -f "$arg") ;;
+  *) proj="${DOTFILES_PROJECTS_DIR:-$HOME/dev}/$arg" ;;
+esac
+[ -d "$proj" ] || { echo "Directory not found: $proj"; exit 1; }
+name="ide-$(basename "$proj" | tr -c 'A-Za-z0-9_.-' '_')"
+
+if ! command -v tmux >/dev/null 2>&1; then
+  echo "tmux not installed"
   exit 1
 fi
-proj="$1"
-case "$proj" in
-  /*) proj_dir="$proj" ;;
-  *)  proj_dir="$HOME/Dev/Projects/$proj" ;;
-esac
-mkdir -p "$proj_dir"
-session="proj_$(basename "$proj_dir" | tr ':/ ' '___')"
-if ! tmux has-session -t "$session" 2>/dev/null; then
-  tmux new-session -d -s "$session" -n editor -c "$proj_dir" "${EDITOR:-nvim} -c 'NvimTreeOpen'"
-  tmux new-window -t "$session":2 -n shell -c "$proj_dir"
-  tmux select-window -t "$session":1
-fi
-tmux attach -t "$session"
 
+if ! tmux has-session -t "$name" 2>/dev/null; then
+  tmux new-session -d -s "$name" -n code -c "$proj" "${EDITOR:-nvim} -c 'NvimTreeOpen'"
+  tmux split-window -v -t "$name":1 -c "$proj"
+  tmux select-pane -t "$name":1.1
+fi
+
+tmux attach -t "$name"

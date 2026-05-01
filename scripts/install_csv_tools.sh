@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
 # Installs DuckDB CLI, xsv, and a csvview helper.
 # - Uses apt for visidata/csvkit if available (optional)
 # - Installs to /usr/local/bin if writable (or sudo available), else ~/.local/bin
+# - Downloads upstream binaries only when DOTFILES_ALLOW_UNVERIFIED_DOWNLOADS=1
 
 SUDO=""
 if [ "${EUID:-$(id -u)}" -ne 0 ] && command -v sudo >/dev/null 2>&1; then SUDO=sudo; fi
+ALLOW_DOWNLOADS="${DOTFILES_ALLOW_UNVERIFIED_DOWNLOADS:-0}"
+TMPDIR="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-csv.XXXXXX")"
+trap 'rm -rf "$TMPDIR"' EXIT
 
 BIN_DIR=/usr/local/bin
 ADDPATH=0
@@ -27,13 +32,18 @@ fi
 
 log "[2/4] DuckDB CLI…"
 if ! command -v duckdb >/dev/null 2>&1; then
-  DUCK_BASE=$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/duckdb/duckdb/releases/latest | sed 's/tag/download/')
-  if curl -fL "$DUCK_BASE/duckdb_cli-linux-amd64.zip" -o /tmp/duckdb.zip || \
-     curl -fL "$DUCK_BASE/duckdb_cli-linux-x86_64.zip" -o /tmp/duckdb.zip; then
-    unzip -o /tmp/duckdb.zip -d /tmp >/dev/null
-    $SUDO install -m 0755 /tmp/duckdb "$BIN_DIR/duckdb"
+  if [ "$ALLOW_DOWNLOADS" != "1" ]; then
+    log "duckdb missing; refusing unverified GitHub binary download."
+    log "Install via apt/brew or rerun with DOTFILES_ALLOW_UNVERIFIED_DOWNLOADS=1."
   else
-    log "WARN: DuckDB download failed; skipping."
+    DUCK_BASE=$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/duckdb/duckdb/releases/latest | sed 's/tag/download/')
+    if curl -fL "$DUCK_BASE/duckdb_cli-linux-amd64.zip" -o "$TMPDIR/duckdb.zip" || \
+       curl -fL "$DUCK_BASE/duckdb_cli-linux-x86_64.zip" -o "$TMPDIR/duckdb.zip"; then
+      unzip -o "$TMPDIR/duckdb.zip" -d "$TMPDIR" >/dev/null
+      $SUDO install -m 0755 "$TMPDIR/duckdb" "$BIN_DIR/duckdb"
+    else
+      log "WARN: DuckDB download failed; skipping."
+    fi
   fi
 else
   log "duckdb already present: $(command -v duckdb)"
@@ -44,11 +54,11 @@ if ! command -v xsv >/dev/null 2>&1; then
   install_xsv() {
     local url="$1"
     log "Trying $url"
-    if curl -fL "$url" -o /tmp/xsv.tar.gz; then
-      tar -xzf /tmp/xsv.tar.gz -C /tmp
+    if curl -fL "$url" -o "$TMPDIR/xsv.tar.gz"; then
+      tar -xzf "$TMPDIR/xsv.tar.gz" -C "$TMPDIR"
       local bin
-      bin=$(tar -tzf /tmp/xsv.tar.gz | grep -E '/xsv$' | head -n1 | sed 's|^|/tmp/|') || true
-      [ -z "$bin" ] && bin=$(find /tmp -maxdepth 2 -type f -name xsv | head -n1 || true)
+      bin=$(tar -tzf "$TMPDIR/xsv.tar.gz" | grep -E '/xsv$' | head -n1 | sed "s|^|$TMPDIR/|") || true
+      [ -z "$bin" ] && bin=$(find "$TMPDIR" -maxdepth 2 -type f -name xsv | head -n1 || true)
       if [ -n "$bin" ] && [ -f "$bin" ]; then
         $SUDO install -m 0755 "$bin" "$BIN_DIR/xsv"
         return 0
@@ -56,15 +66,20 @@ if ! command -v xsv >/dev/null 2>&1; then
     fi
     return 1
   }
-  XSV_HTML=$(curl -fsSL https://github.com/BurntSushi/xsv/releases/latest || true)
-  if [ -n "$XSV_HTML" ]; then
-    XSV_PATH=$(printf "%s" "$XSV_HTML" | grep -oE "/BurntSushi/xsv/releases/download/[^"]+/xsv-[^"]+-(x86_64|amd64)-unknown-linux-(gnu|musl)\.tar\.gz" | head -n1 || true)
-    [ -n "$XSV_PATH" ] && install_xsv "https://github.com$XSV_PATH" || true
-  fi
-  if ! command -v xsv >/dev/null 2>&1; then
-    install_xsv "https://github.com/BurntSushi/xsv/releases/download/0.13.0/xsv-0.13.0-x86_64-unknown-linux-gnu.tar.gz" || \
-    install_xsv "https://github.com/BurntSushi/xsv/releases/download/0.13.0/xsv-0.13.0-x86_64-unknown-linux-musl.tar.gz" || \
-    log "xsv not installed (asset not reachable); csvview will fall back."
+  if [ "$ALLOW_DOWNLOADS" != "1" ]; then
+    log "xsv missing; refusing unverified GitHub binary download."
+    log "Install via package manager or rerun with DOTFILES_ALLOW_UNVERIFIED_DOWNLOADS=1."
+  else
+    XSV_HTML=$(curl -fsSL https://github.com/BurntSushi/xsv/releases/latest || true)
+    if [ -n "$XSV_HTML" ]; then
+      XSV_PATH=$(printf "%s" "$XSV_HTML" | grep -oE '/BurntSushi/xsv/releases/download/[^"]+/xsv-[^"]+-(x86_64|amd64)-unknown-linux-(gnu|musl)\.tar\.gz' | head -n1 || true)
+      [ -n "$XSV_PATH" ] && install_xsv "https://github.com$XSV_PATH" || true
+    fi
+    if ! command -v xsv >/dev/null 2>&1; then
+      install_xsv "https://github.com/BurntSushi/xsv/releases/download/0.13.0/xsv-0.13.0-x86_64-unknown-linux-gnu.tar.gz" || \
+      install_xsv "https://github.com/BurntSushi/xsv/releases/download/0.13.0/xsv-0.13.0-x86_64-unknown-linux-musl.tar.gz" || \
+      log "xsv not installed (asset not reachable); csvview will fall back."
+    fi
   fi
 else
   log "xsv already present: $(command -v xsv)"
@@ -73,7 +88,7 @@ fi
 log "[4/4] csvview helper…"
 CSVVIEW="$BIN_DIR/csvview"
 if [ ! -f "$CSVVIEW" ]; then
-  cat > /tmp/csvview <<'SH'
+  cat > "$TMPDIR/csvview" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
 if [ $# -eq 0 ]; then
@@ -88,7 +103,7 @@ else
   column -s, -t "$1" | less -S
 fi
 SH
-  $SUDO install -m 0755 /tmp/csvview "$CSVVIEW"
+  $SUDO install -m 0755 "$TMPDIR/csvview" "$CSVVIEW"
 else
   log "csvview already exists: $CSVVIEW"
 fi

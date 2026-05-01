@@ -5,10 +5,10 @@ arg=${1:-}
 [ -n "$arg" ] || { echo "Usage: tmux_ide.sh <path-or-project-name>"; exit 1; }
 case "$arg" in
   /*|.~*) proj=$(readlink -f "$arg") ;;
-  *) proj="$HOME/Dev/Projects/$arg" ;;
+  *) proj="${DOTFILES_PROJECTS_DIR:-$HOME/dev}/$arg" ;;
 esac
 [ -d "$proj" ] || { echo "Directory not found: $proj"; exit 1; }
-name="ide-$(basename "$proj")"
+name="ide-$(basename "$proj" | tr -c 'A-Za-z0-9_.-' '_')"
 
 if ! command -v tmux >/dev/null 2>&1; then
   echo "tmux not installed"

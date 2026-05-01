@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
-if [ $# -lt 1 ]; then
-  echo "Usage: tmux_project.sh <project-name>" >&2
-  exit 1
+name=${1:-}
+[ -n "$name" ] || { echo "Usage: tmux_project.sh <project-dir>"; exit 1; }
+proj="${DOTFILES_PROJECTS_DIR:-$HOME/dev}/$name"
+[ -d "$proj" ] || { echo "Project not found: $proj"; exit 1; }
+session="proj-$(basename "$name" | tr -c 'A-Za-z0-9_.-' '_')"
+if ! tmux has-session -t "$session" 2>/dev/null; then
+  tmux new-session -d -s "$session" -n editor -c "$proj"
+  tmux send-keys -t "$session":1 "${EDITOR:-nvim}" C-m
+  tmux new-window -t "$session":2 -n git -c "$proj"
+  tmux send-keys -t "$session":2 'git status' C-m
 fi
-"$(dirname "$0")/tmux_ide.sh" "$1"
-
+tmux attach -t "$session"
